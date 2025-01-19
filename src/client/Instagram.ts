@@ -1,4 +1,3 @@
-
 import { Browser, DEFAULT_INTERCEPT_RESOLUTION_PRIORITY } from "puppeteer";
 import puppeteer from "puppeteer-extra";
 import StealthPlugin from "puppeteer-extra-plugin-stealth";
@@ -20,6 +19,7 @@ puppeteer.use(
     })
 );
 
+const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
 async function runInstagram() {
     const server = new Server({ port: 8000 });
@@ -163,8 +163,12 @@ async function interactWithPosts(page: any) {
                 const comment = result[0]?.comment;
                 await commentBox.type(comment); // Replace with random comment
 
-                const postButtonSelector = `${postSelector} div[role="button"]:not([disabled]):has-text("Post")`;
-                const postButton = await page.$(postButtonSelector);
+                // New selector approach for the post button
+                const postButton = await page.evaluateHandle(() => {
+                    const buttons = Array.from(document.querySelectorAll('div[role="button"]'));
+                    return buttons.find(button => button.textContent === 'Post' && !button.hasAttribute('disabled'));
+                });
+
                 if (postButton) {
                     console.log(`Posting comment on post ${postIndex}...`);
                     await postButton.click();
@@ -176,12 +180,12 @@ async function interactWithPosts(page: any) {
                 console.log("Comment box not found.");
             }
 
-            // Wait before moving to the next post (randomize between 5 and 10 seconds)
-            const delay = Math.floor(Math.random() * 5000) + 5000; // Random delay between 5 and 10 seconds
+            // Replace the waitForTimeout with our delay function
+            const waitTime = Math.floor(Math.random() * 5000) + 5000;
             console.log(
-                `Waiting ${delay / 1000} seconds before moving to the next post...`
+                `Waiting ${waitTime / 1000} seconds before moving to the next post...`
             );
-            await page.waitForTimeout(delay);
+            await delay(waitTime);
 
             // Scroll to the next post
             await page.evaluate(() => {
